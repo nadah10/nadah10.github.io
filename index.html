@@ -1,347 +1,292 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emploi du Temps</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emploi du Temps</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
-            overflow-x: hidden;
-        }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 10px;
+      overflow-x: hidden;
+    }
 
-        .calendar {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: repeat(2, 600px); /* Two weeks */
-            gap: 10px;
-            width: 100%;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+    /* === CALENDRIER === */
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(2, 1fr); /* 2 semaines */
+      gap: 6px;
+      width: 100%;
+      height: 90vh; /* prend quasi tout l’écran */
+      max-height: 90vh;
+    }
 
-        .day {
-            border: 1px solid #ccc;
-            background-color: #fff;
-            display: flex;
-            flex-direction: column;
-            padding: 10px;
-            position: relative;
-            cursor: pointer;
-            height: 100%;
-        }
+    .day {
+      border: 1px solid #ccc;
+      background-color: #fff;
+      display: flex;
+      flex-direction: column;
+      padding: 5px;
+      cursor: pointer;
+      overflow: hidden;
+    }
 
-        .day[data-day="Samedi"], .day[data-day="Dimanche"] {
-            background-color: #e0e0e0; /* Couleur grisée */
-        }
+    .day[data-day="Samedi"], .day[data-day="Dimanche"] {
+      background-color: #e0e0e0; /* gris pour week-end */
+    }
 
-        .day-header {
-            background-color: #f4a7c1; /* Pastel pink */
-            color: white;
-            font-weight: bold;
-            text-align: center;
-            padding: 10px;
-        }
+    .day-header {
+      background-color: #f4a7c1;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      padding: 4px;
+      font-size: 14px;
+    }
 
-        .day-content {
-            flex: 1;
-            padding: 10px;
-            overflow-y: auto;
-        }
+    .day-content {
+      flex: 1;
+      padding: 4px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
 
-        /* Event styles */
-        .event-pink {
-            border: 1px solid #f4a7c1;
-            background-color: #fddde6;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+    /* === ÉVÉNEMENTS === */
+    .event-pink, .event-red, .event-blue, .event-green {
+      padding: 4px;
+      margin-bottom: 4px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
 
-        .event-red {
-            border: 1px solid #f47a7a;
-            background-color: #fddede;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-            /* Event styles for new colors */
-.event-blue {
-    border: 1px solid #add8e6;
-    background-color: #d0eaff;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    cursor: pointer;
-}
+    .event-pink { border: 1px solid #f4a7c1; background-color: #fddde6; }
+    .event-red  { border: 1px solid #f47a7a; background-color: #fddede; }
+    .event-blue { border: 1px solid #add8e6; background-color: #d0eaff; }
+    .event-green{ border: 1px solid #98fb98; background-color: #d0f5d0; }
 
-.event-green {
-    border: 1px solid #98fb98;
-    background-color: #d0f5d0;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    cursor: pointer;
-}
+    .event-title { font-weight: bold; font-size: 12px; margin-bottom: 2px; }
+    .event-text  { font-size: 11px; }
 
-        .event-title {
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 16px;
-        }
+    /* === MODALE === */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      width: 280px;
+      z-index: 1000;
+    }
 
-        .event-text {
-            font-size: 14px;
-        }
+    .modal-header { font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+    .modal input, .modal textarea, .modal select {
+      width: 100%;
+      padding: 6px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
 
-        .modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: white;
-            padding: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            width: 300px;
-            z-index: 1000;
-        }
+    .modal textarea { height: 60px; }
 
-        .modal-header {
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
+    .modal button {
+      width: 100%;
+      background-color: #f4a7c1;
+      color: white;
+      border: none;
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
 
-        .modal input, .modal textarea {
-            width: 100%;
-            padding: 8px;
-            margin: 8px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
+    #deleteEventBtn { background-color: red; display: none; }
 
-        .modal textarea {
-            height: 80px;
-        }
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 999;
+    }
 
-        .modal button {
-            width: 100%;
-            background-color: #f4a7c1; /* Pastel pink */
-            color: white;
-            border: none;
-            padding: 10px;
-            font-size: 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
+    .download-btn {
+      display: block;
+      margin: 12px auto;
+      padding: 8px 16px;
+      background-color: #f4a7c1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
 
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-        }
-
-        .download-btn {
-            display: block;
-            margin: 20px auto;
-            padding: 10px 20px;
-            background-color: #f4a7c1; /* Pastel pink */
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        #deleteEventBtn {
-            background-color: red;
-            display: none;
-        }
-
-    </style>
+    /* === IMPRESSION === */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        margin: 0;
+      }
+      .download-btn, .modal, .overlay { display: none !important; }
+      .calendar {
+        height: auto;
+        max-height: none;
+        gap: 2px;
+      }
+      .day {
+        font-size: 10px;
+        padding: 3px;
+      }
+      .day-header {
+        font-size: 11px;
+        padding: 2px;
+      }
+      .day-content {
+        font-size: 9px;
+        overflow: visible;
+      }
+      @page {
+        size: A4 landscape;
+        margin: 10mm;
+      }
+    }
+  </style>
 </head>
 <body>
 
-    <div class="calendar">
-        <!-- Semaine 1 -->
-        <div class="day" data-day="Lundi">
-            <div class="day-header">Lundi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Mardi">
-            <div class="day-header">Mardi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Mercredi">
-            <div class="day-header">Mercredi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Jeudi">
-            <div class="day-header">Jeudi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Vendredi">
-            <div class="day-header">Vendredi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Samedi">
-            <div class="day-header">Samedi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Dimanche">
-            <div class="day-header">Dimanche</div>
-            <div class="day-content"></div>
-        </div>
+  <div class="calendar">
+    <!-- semaine 1 -->
+    <div class="day" data-day="Lundi"><div class="day-header">Lundi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Mardi"><div class="day-header">Mardi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Mercredi"><div class="day-header">Mercredi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Jeudi"><div class="day-header">Jeudi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Vendredi"><div class="day-header">Vendredi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Samedi"><div class="day-header">Samedi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Dimanche"><div class="day-header">Dimanche</div><div class="day-content"></div></div>
 
-        <!-- Semaine 2 -->
-        <div class="day" data-day="Lundi">
-            <div class="day-header">Lundi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Mardi">
-            <div class="day-header">Mardi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Mercredi">
-            <div class="day-header">Mercredi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Jeudi">
-            <div class="day-header">Jeudi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Vendredi">
-            <div class="day-header">Vendredi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Samedi">
-            <div class="day-header">Samedi</div>
-            <div class="day-content"></div>
-        </div>
-        <div class="day" data-day="Dimanche">
-            <div class="day-header">Dimanche</div>
-            <div class="day-content"></div>
-        </div>
-    </div>
+    <!-- semaine 2 -->
+    <div class="day" data-day="Lundi"><div class="day-header">Lundi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Mardi"><div class="day-header">Mardi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Mercredi"><div class="day-header">Mercredi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Jeudi"><div class="day-header">Jeudi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Vendredi"><div class="day-header">Vendredi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Samedi"><div class="day-header">Samedi</div><div class="day-content"></div></div>
+    <div class="day" data-day="Dimanche"><div class="day-header">Dimanche</div><div class="day-content"></div></div>
+  </div>
 
-    <!-- Bouton pour télécharger le calendrier -->
-    <button class="download-btn" id="downloadBtn">Télécharger le calendrier</button>
+  <button class="download-btn" id="downloadBtn">Télécharger le calendrier</button>
 
-    <!-- Fenêtre modale -->
-    <div class="modal" id="eventModal">
+  <!-- MODALE -->
+  <div class="modal" id="eventModal">
     <div class="modal-header">Ajouter/Modifier un événement</div>
     <input type="text" id="eventTitle" placeholder="Titre de l'événement" />
     <textarea id="eventText" placeholder="Description de l'événement"></textarea>
     <label for="eventColor">Couleur :</label>
     <select id="eventColor">
-        <option value="pink">Rose</option>
-        <option value="red">Rouge pâle</option>
-        <option value="blue">Bleu pâle</option>
-        <option value="green">Vert pâle</option>
+      <option value="pink">Rose</option>
+      <option value="red">Rouge pâle</option>
+      <option value="blue">Bleu pâle</option>
+      <option value="green">Vert pâle</option>
     </select>
     <button id="saveEventBtn">Enregistrer</button>
     <button id="deleteEventBtn">Supprimer</button>
-</div>
+  </div>
+  <div class="overlay" id="modalOverlay"></div>
 
+  <script>
+    const modal = document.getElementById('eventModal');
+    const overlay = document.getElementById('modalOverlay');
+    let selectedDay = null;
+    let selectedEvent = null;
 
-    <!-- Overlay (pour assombrir l'arrière-plan lors de l'affichage de la modale) -->
-    <div class="overlay" id="modalOverlay"></div>
+    document.querySelectorAll('.day').forEach(day => {
+      day.addEventListener('click', (e) => {
+        if (e.target.classList.contains('event-pink') ||
+            e.target.classList.contains('event-red') ||
+            e.target.classList.contains('event-blue') ||
+            e.target.classList.contains('event-green')) {
+          selectedEvent = e.target;
+          document.getElementById('eventTitle').value = selectedEvent.querySelector('.event-title').textContent;
+          document.getElementById('eventText').value = selectedEvent.querySelector('.event-text') ? selectedEvent.querySelector('.event-text').textContent : '';
+          if (selectedEvent.classList.contains('event-red')) document.getElementById('eventColor').value = 'red';
+          else if (selectedEvent.classList.contains('event-blue')) document.getElementById('eventColor').value = 'blue';
+          else if (selectedEvent.classList.contains('event-green')) document.getElementById('eventColor').value = 'green';
+          else document.getElementById('eventColor').value = 'pink';
+          document.getElementById('deleteEventBtn').style.display = 'block';
+        } else {
+          selectedDay = day.querySelector('.day-content');
+          document.getElementById('eventTitle').value = '';
+          document.getElementById('eventText').value = '';
+          document.getElementById('eventColor').value = 'pink';
+          document.getElementById('deleteEventBtn').style.display = 'none';
+        }
+        modal.style.display = 'block';
+        overlay.style.display = 'block';
+      });
+    });
 
-    <script>
-        const modal = document.getElementById('eventModal');
-        const overlay = document.getElementById('modalOverlay');
-        let selectedDay = null;
-        let selectedEvent = null; // Pour l'événement sélectionné
-
-        // Ajouter ou ouvrir un événement existant en cliquant sur un jour
-        document.querySelectorAll('.day').forEach(day => {
-            day.addEventListener('click', (e) => {
-                if (e.target.classList.contains('event-pink') || e.target.classList.contains('event-red')) {
-                    // Cliquer sur un événement pour le modifier ou le supprimer
-                    selectedEvent = e.target;
-                    document.getElementById('eventTitle').value = selectedEvent.querySelector('.event-title').textContent;
-                    document.getElementById('eventText').value = selectedEvent.querySelector('.event-text') ? selectedEvent.querySelector('.event-text').textContent : '';
-                    document.getElementById('eventColor').value = selectedEvent.classList.contains('event-red') ? 'red' : 'pink';
-                    document.getElementById('deleteEventBtn').style.display = 'block';
-                } else {
-                    // Ajouter un nouvel événement
-                    selectedDay = day.querySelector('.day-content');
-                    document.getElementById('eventTitle').value = '';
-                    document.getElementById('eventText').value = '';
-                    document.getElementById('eventColor').value = 'pink';
-                    document.getElementById('deleteEventBtn').style.display = 'none';
-                }
-                modal.style.display = 'block';
-                overlay.style.display = 'block';
-            });
-        });
-
-        // Enregistrer l'événement
-       document.getElementById('saveEventBtn').addEventListener('click', () => {
-    const title = document.getElementById('eventTitle').value;
-    const text = document.getElementById('eventText').value;
-    const color = document.getElementById('eventColor').value;
-    if (title) {
+    document.getElementById('saveEventBtn').addEventListener('click', () => {
+      const title = document.getElementById('eventTitle').value;
+      const text = document.getElementById('eventText').value;
+      const color = document.getElementById('eventColor').value;
+      if (title) {
         const eventElement = document.createElement('div');
         eventElement.classList.add(
-            color === 'pink' ? 'event-pink' :
-            color === 'red' ? 'event-red' :
-            color === 'blue' ? 'event-blue' :
-            'event-green'
+          color === 'pink' ? 'event-pink' :
+          color === 'red' ? 'event-red' :
+          color === 'blue' ? 'event-blue' :
+          'event-green'
         );
         eventElement.innerHTML = `<div class="event-title">${title}</div><div class="event-text">${text}</div>`;
         if (selectedEvent) {
-            selectedEvent.replaceWith(eventElement);
-            selectedEvent = null;
+          selectedEvent.replaceWith(eventElement);
+          selectedEvent = null;
         } else {
-            selectedDay.appendChild(eventElement);
+          selectedDay.appendChild(eventElement);
         }
-    }
-    modal.style.display = 'none';
-    overlay.style.display = 'none';
-});
+      }
+      modal.style.display = 'none';
+      overlay.style.display = 'none';
+    });
 
+    document.getElementById('deleteEventBtn').addEventListener('click', () => {
+      if (selectedEvent) {
+        selectedEvent.remove();
+        selectedEvent = null;
+      }
+      modal.style.display = 'none';
+      overlay.style.display = 'none';
+    });
 
-        // Supprimer un événement
-        document.getElementById('deleteEventBtn').addEventListener('click', () => {
-            if (selectedEvent) {
-                selectedEvent.remove();
-                selectedEvent = null;
-            }
-            modal.style.display = 'none';
-            overlay.style.display = 'none';
-        });
+    overlay.addEventListener('click', () => {
+      modal.style.display = 'none';
+      overlay.style.display = 'none';
+      selectedEvent = null;
+    });
 
-        // Fermer la modale en cliquant sur l'overlay
-        overlay.addEventListener('click', () => {
-            modal.style.display = 'none';
-            overlay.style.display = 'none';
-            selectedEvent = null; // Réinitialiser l'événement sélectionné
-        });
-
-        // Télécharger le calendrier en tant que fichier PDF
-        document.getElementById('downloadBtn').addEventListener('click', () => {
-            window.print();
-        });
-    </script>
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      window.print();
+    });
+  </script>
 
 </body>
 </html>
