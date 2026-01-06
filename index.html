@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emploi du Temps Interactif</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
         * {
             box-sizing: border-box;
@@ -47,17 +49,23 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px; /* Légèrement plus petit pour tout faire rentrer */
             font-weight: bold;
             transition: background 0.2s;
             color: white;
-            text-align: center;
+            text-align: left; /* Alignement texte */
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .btn-print { background-color: #333; }
-        .btn-save { background-color: #4CAF50; }
-        .btn-load { background-color: #2196F3; }
-        .btn-clear { background-color: #f44336; }
+        .btn i { width: 15px; text-align: center; }
+
+        .btn-print { background-color: #555; } /* Gris foncé */
+        .btn-pdf   { background-color: #E91E63; } /* Rose foncé pour le PDF */
+        .btn-save  { background-color: #4CAF50; } /* Vert */
+        .btn-load  { background-color: #2196F3; } /* Bleu */
+        .btn-clear { background-color: #f44336; } /* Rouge */
         
         .btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
@@ -65,13 +73,16 @@
         .calendar-container {
             max-width: 1400px;
             margin: 0 auto;
-            margin-right: 230px; /* Espace pour le menu controls */
+            margin-right: 230px; 
+            background: white; /* Important pour le PDF */
+            padding: 10px;     /* Marge interne pour le PDF */
+            border-radius: 8px;
         }
 
         .calendar {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: repeat(2, minmax(300px, 1fr)); /* Hauteur min pour écran */
+            grid-template-rows: repeat(2, minmax(300px, 1fr));
             gap: 10px;
             width: 100%;
         }
@@ -83,14 +94,10 @@
             flex-direction: column;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
+            /* Pas de box-shadow ici pour éviter les bugs visuels sur le PDF généré */
+            border: 1px solid #ccc;
             height: 100%;
-            min-height: 200px; /* Hauteur min visuelle */
-        }
-
-        .day:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            min-height: 200px;
         }
 
         .day-header {
@@ -102,9 +109,9 @@
             font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
         }
 
-        /* Jours grisés pour le weekend */
         .day[data-day="Samedi"] .day-header, .day[data-day="Dimanche"] .day-header {
             background-color: #9e9e9e;
         }
@@ -127,12 +134,10 @@
             border-radius: 4px;
             font-size: 13px;
             cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border-left: 4px solid rgba(0,0,0,0.2);
-            transition: filter 0.2s;
+            border-left: 4px solid rgba(0,0,0,0.1);
+            margin-bottom: 2px;
         }
-        .event:hover { filter: brightness(0.95); }
-
+        
         .event-title {
             font-weight: bold;
             margin-bottom: 4px;
@@ -141,8 +146,8 @@
         
         .event-text {
             font-size: 12px;
-            white-space: pre-wrap; /* IMPORTANT: Permet les sauts de ligne et listes */
-            line-height: 1.4;
+            white-space: pre-wrap; 
+            line-height: 1.3;
         }
 
         /* Couleurs */
@@ -179,81 +184,26 @@
         }
 
         .modal h2 { font-size: 18px; margin-bottom: 15px; color: #333; }
-
         .modal input, .modal textarea, .modal select {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-family: inherit;
+            width: 100%; padding: 10px; margin-bottom: 12px;
+            border: 1px solid #ccc; border-radius: 6px; font-family: inherit;
         }
-
         .modal textarea { height: 100px; resize: vertical; }
-
         .modal-buttons { display: flex; gap: 10px; margin-top: 10px; }
-        .modal-buttons button { flex: 1; }
+        .modal-buttons button { flex: 1; justify-content: center; }
 
-        /* === IMPRESSION (PDF/PAPIER) === */
+        /* === IMPRESSION STANDARD (Ctrl+P) === */
         @media print {
-            @page {
-                size: A4 landscape;
-                margin: 5mm; /* Marges fines pour maximiser l'espace */
-            }
-
-            body {
-                background: white;
-                padding: 0;
-                margin: 0;
-                -webkit-print-color-adjust: exact; /* Force l'impression des couleurs de fond */
-                print-color-adjust: exact;
-            }
-
+            @page { size: A4 landscape; margin: 5mm; }
+            body { background: white; padding: 0; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .controls, .overlay, .modal { display: none !important; }
-
-            .calendar-container {
-                width: 100%;
-                max-width: none;
-                margin: 0;
-            }
-
-            .calendar {
-                display: grid;
-                /* Force la grille à prendre toute la hauteur de la page A4 moins un peu de marge */
-                height: 190mm; 
-                grid-template-rows: 1fr 1fr; /* Deux lignes de hauteur égale EXACTE */
-                gap: 2mm;
-            }
-
-            .day {
-                border: 1px solid #000; /* Bordures noires nettes */
-                box-shadow: none;
-                border-radius: 0;
-                background-color: white !important; /* Fond blanc pour économie d'encre sauf header */
-            }
-            
-            /* On garde la couleur des headers en impression pour la lisibilité */
-            .day-header {
-                color: black;
-                border-bottom: 1px solid #000;
-                font-size: 11pt;
-                padding: 4px;
-            }
-
-            /* Styles des événements à l'impression */
-            .event {
-                border: 1px solid #999;
-                background-color: #f0f0f0 !important; /* Gris très clair pour économiser l'encre */
-                color: black !important;
-                margin-bottom: 2mm;
-                page-break-inside: avoid;
-            }
-            
-            .event-title { font-size: 10pt; }
-            .event-text { font-size: 9pt; }
+            .calendar-container { width: 100%; max-width: none; margin: 0; padding: 0; }
+            .calendar { height: 190mm; grid-template-rows: 1fr 1fr; gap: 2mm; }
+            .day { border: 1px solid #000; border-radius: 0; }
+            .day-header { color: black; border-bottom: 1px solid #000; }
         }
         
-        /* Ajustement Mobile pour l'édition */
+        /* Ajustement Mobile */
         @media screen and (max-width: 768px) {
             .calendar { grid-template-columns: 1fr; grid-template-rows: auto; }
             .controls { position: static; width: 100%; margin-bottom: 20px; flex-direction: row; flex-wrap: wrap; }
@@ -266,15 +216,15 @@
     <div class="controls">
         <h3>Menu</h3>
         <button class="btn btn-save" id="saveBtn"><i class="fas fa-save"></i> Sauvegarder</button>
-        <button class="btn btn-load" id="loadBtn"><i class="fas fa-upload"></i> Charger</button>
-        <button class="btn btn-print" id="printBtn"><i class="fas fa-file-download"></i> Télécharger PDF</button>
+        <button class="btn btn-load" id="loadBtn"><i class="fas fa-cloud-download-alt"></i> Charger</button>
+        <hr style="border: 0; border-top: 1px solid #ddd; width: 100%;">
+        <button class="btn btn-print" id="printBtn"><i class="fas fa-print"></i> Imprimer</button>
+        <button class="btn btn-pdf" id="downloadPdfBtn"><i class="fas fa-file-pdf"></i> Télécharger PDF</button>
+        <hr style="border: 0; border-top: 1px solid #ddd; width: 100%;">
         <button class="btn btn-clear" id="clearBtn"><i class="fas fa-trash"></i> Tout effacer</button>
-        <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">
-            La sauvegarde reste dans votre navigateur.
-        </div>
     </div>
 
-    <div class="calendar-container">
+    <div class="calendar-container" id="calendarToExport">
         <div class="calendar" id="calendarGrid">
             </div>
     </div>
@@ -308,23 +258,20 @@
         const daysOfWeek = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
         const calendarGrid = document.getElementById('calendarGrid');
 
-        // --- GÉNÉRATION DE LA GRILLE ---
+        // --- GÉNÉRATION ---
         function generateCalendar() {
             calendarGrid.innerHTML = '';
-            // On génère 14 jours (2 semaines)
             for (let i = 0; i < 14; i++) {
                 const dayName = daysOfWeek[i % 7];
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'day';
                 dayDiv.setAttribute('data-day', dayName);
-                dayDiv.setAttribute('data-index', i); // Index unique pour la sauvegarde
+                dayDiv.setAttribute('data-index', i);
 
-                // Header
                 const header = document.createElement('div');
                 header.className = 'day-header';
                 header.textContent = i < 7 ? dayName : dayName + " (S2)";
                 
-                // Content Zone
                 const content = document.createElement('div');
                 content.className = 'day-content';
                 content.onclick = (e) => {
@@ -337,103 +284,65 @@
             }
         }
 
-        // --- GESTION DE LA MODALE ---
+        // --- MODALE ---
         const modal = document.getElementById('eventModal');
         const overlay = document.getElementById('modalOverlay');
         const titleInput = document.getElementById('eventTitle');
         const textInput = document.getElementById('eventText');
         const colorInput = document.getElementById('eventColor');
         const deleteBtn = document.getElementById('deleteEventBtn');
-
         let currentTargetContainer = null;
         let currentTargetEvent = null;
 
         function openModal(container, eventElement) {
             currentTargetContainer = container;
             currentTargetEvent = eventElement;
-
             if (eventElement) {
-                // Mode Modification
                 titleInput.value = eventElement.querySelector('.event-title').textContent;
                 textInput.value = eventElement.querySelector('.event-text').textContent;
-                
-                // Retrouver la couleur depuis la classe
                 const classes = eventElement.className.split(' ');
                 const colorClass = classes.find(c => c.startsWith('color-'));
                 colorInput.value = colorClass ? colorClass.replace('color-', '') : 'pink';
-                
                 deleteBtn.style.display = 'block';
             } else {
-                // Mode Création
-                titleInput.value = '';
-                textInput.value = '';
-                colorInput.value = 'pink';
+                titleInput.value = ''; textInput.value = ''; colorInput.value = 'pink';
                 deleteBtn.style.display = 'none';
             }
-
-            modal.style.display = 'block';
-            overlay.style.display = 'block';
+            modal.style.display = 'block'; overlay.style.display = 'block';
             titleInput.focus();
         }
 
         function closeModal() {
-            modal.style.display = 'none';
-            overlay.style.display = 'none';
-            currentTargetContainer = null;
-            currentTargetEvent = null;
+            modal.style.display = 'none'; overlay.style.display = 'none';
+            currentTargetContainer = null; currentTargetEvent = null;
         }
-
         overlay.addEventListener('click', closeModal);
 
-        // --- VALIDATION ÉVÉNEMENT ---
         document.getElementById('confirmEventBtn').addEventListener('click', () => {
             const title = titleInput.value.trim();
-            const text = textInput.value; // On garde les sauts de ligne
+            const text = textInput.value;
             const color = colorInput.value;
-
-            if (!title) return alert("Il faut au moins un titre !");
+            if (!title) return alert("Titre manquant !");
 
             const eventDiv = currentTargetEvent || document.createElement('div');
             eventDiv.className = `event color-${color}`;
-            // Attention: textContent pour le titre, mais innerHTML non nécessaire car CSS white-space gere le format
-            eventDiv.innerHTML = `
-                <div class="event-title">${escapeHtml(title)}</div>
-                <div class="event-text">${escapeHtml(text)}</div>
-            `;
+            eventDiv.innerHTML = `<div class="event-title">${escapeHtml(title)}</div><div class="event-text">${escapeHtml(text)}</div>`;
+            eventDiv.onclick = (e) => { e.stopPropagation(); openModal(eventDiv.parentElement, eventDiv); };
 
-            // Ajout de l'événement click pour modification
-            eventDiv.onclick = (e) => {
-                e.stopPropagation(); // Empêche de déclencher le click du jour
-                openModal(eventDiv.parentElement, eventDiv);
-            };
-
-            if (!currentTargetEvent) {
-                currentTargetContainer.appendChild(eventDiv);
-            }
-            
-            closeModal();
-            saveToLocalStorage(); // Sauvegarde auto après modif
+            if (!currentTargetEvent) currentTargetContainer.appendChild(eventDiv);
+            closeModal(); saveToLocalStorage();
         });
 
         document.getElementById('deleteEventBtn').addEventListener('click', () => {
-            if (currentTargetEvent) {
-                currentTargetEvent.remove();
-            }
-            closeModal();
-            saveToLocalStorage();
+            if (currentTargetEvent) currentTargetEvent.remove();
+            closeModal(); saveToLocalStorage();
         });
 
-        // Sécurité XSS simple
         function escapeHtml(text) {
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // --- SAUVEGARDE & CHARGEMENT (LOCALSTORAGE) ---
+        // --- SAUVEGARDE LOCALE ---
         function saveToLocalStorage() {
             const data = [];
             document.querySelectorAll('.day').forEach((day, index) => {
@@ -449,69 +358,61 @@
                 data.push({ index: index, events: events });
             });
             localStorage.setItem('myTimetableData', JSON.stringify(data));
-            console.log("Sauvegardé !");
         }
 
         function loadFromLocalStorage() {
             const stored = localStorage.getItem('myTimetableData');
-            if (!stored) {
-                alert("Aucune sauvegarde trouvée !");
-                return;
-            }
-            
-            const data = JSON.parse(stored);
-            // On nettoie d'abord
+            if (!stored) return alert("Aucune sauvegarde !");
             generateCalendar();
-            
-            // On remplit
+            const data = JSON.parse(stored);
             const days = document.querySelectorAll('.day-content');
             data.forEach(item => {
                 if (days[item.index]) {
                     item.events.forEach(evtData => {
                         const div = document.createElement('div');
                         div.className = `event color-${evtData.color}`;
-                        div.innerHTML = `
-                            <div class="event-title">${escapeHtml(evtData.title)}</div>
-                            <div class="event-text">${escapeHtml(evtData.text)}</div>
-                        `;
-                        div.onclick = (e) => {
-                            e.stopPropagation();
-                            openModal(days[item.index], div);
-                        };
+                        div.innerHTML = `<div class="event-title">${escapeHtml(evtData.title)}</div><div class="event-text">${escapeHtml(evtData.text)}</div>`;
+                        div.onclick = (e) => { e.stopPropagation(); openModal(days[item.index], div); };
                         days[item.index].appendChild(div);
                     });
                 }
             });
         }
 
-        // --- BOUTONS DU MENU ---
-        document.getElementById('saveBtn').addEventListener('click', () => {
-            saveToLocalStorage();
-            alert("Emploi du temps sauvegardé dans ce navigateur !");
-        });
-
+        document.getElementById('saveBtn').addEventListener('click', () => { saveToLocalStorage(); alert("Sauvegardé !"); });
         document.getElementById('loadBtn').addEventListener('click', loadFromLocalStorage);
+        document.getElementById('clearBtn').addEventListener('click', () => { if(confirm("Effacer tout ?")) { generateCalendar(); localStorage.removeItem('myTimetableData'); }});
 
+        // --- FONCTIONS D'EXPORTATION ---
+
+        // 1. Impression classique
         document.getElementById('printBtn').addEventListener('click', () => {
             window.print();
         });
 
-        document.getElementById('clearBtn').addEventListener('click', () => {
-            if(confirm("Voulez-vous vraiment tout effacer ?")) {
-                generateCalendar();
-                localStorage.removeItem('myTimetableData');
-            }
+        // 2. Téléchargement direct PDF (Nouveau !)
+        document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+            // Élément à capturer
+            const element = document.getElementById('calendarToExport');
+            
+            // Options pour html2pdf
+            const opt = {
+                margin:       [10, 10, 10, 10], // Marges [Haut, Gauche, Bas, Droite] en mm
+                filename:     'mon-emploi-du-temps.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true }, // scale: 2 améliore la netteté
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+
+            // Lancer la génération (affiche une petite animation interne si c'est long)
+            html2pdf().set(opt).from(element).save();
         });
 
-        // --- INITIALISATION ---
+        // --- INIT ---
         window.onload = () => {
             generateCalendar();
-            // Optionnel : charger automatiquement au démarrage s'il y a des données
-            if(localStorage.getItem('myTimetableData')) {
-                loadFromLocalStorage();
-            }
+            if(localStorage.getItem('myTimetableData')) loadFromLocalStorage();
         };
-
     </script>
 </body>
 </html>
