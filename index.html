@@ -1,293 +1,517 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Emploi du Temps</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emploi du Temps Interactif</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      padding: 10px;
-      overflow-x: hidden;
-    }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            padding: 20px;
+            overflow-x: hidden;
+        }
 
-    /* === CALENDRIER === */
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      grid-template-rows: repeat(2, 1fr); /* 2 semaines */
-      gap: 6px;
-      width: 100%;
-      height: 90vh; /* prend quasi tout l’écran */
-      max-height: 90vh;
-    }
+        /* === CONTROLS (Bannière latérale) === */
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 200px;
+        }
+        
+        .controls h3 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+            text-align: center;
+        }
 
-    .day {
-      border: 1px solid #ccc;
-      background-color: #fff;
-      display: flex;
-      flex-direction: column;
-      padding: 5px;
-      cursor: pointer;
-      overflow: hidden;
-    }
+        .btn {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s;
+            color: white;
+            text-align: center;
+        }
 
-    .day[data-day="Samedi"], .day[data-day="Dimanche"] {
-      background-color: #e0e0e0; /* gris pour week-end */
-    }
+        .btn-print { background-color: #333; }
+        .btn-save { background-color: #4CAF50; }
+        .btn-load { background-color: #2196F3; }
+        .btn-clear { background-color: #f44336; }
+        
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
-    .day-header {
-      background-color: #f4a7c1;
-      color: white;
-      font-weight: bold;
-      text-align: center;
-      padding: 4px;
-      font-size: 14px;
-    }
+        /* === CALENDRIER === */
+        .calendar-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            margin-right: 230px; /* Espace pour le menu controls */
+        }
 
-    .day-content {
-      flex: 1;
-      padding: 4px;
-      overflow-y: auto;
-      font-size: 12px;
-    }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: repeat(2, minmax(300px, 1fr)); /* Hauteur min pour écran */
+            gap: 10px;
+            width: 100%;
+        }
 
-    /* === ÉVÉNEMENTS === */
-    .event-pink, .event-red, .event-blue, .event-green {
-      padding: 4px;
-      margin-bottom: 4px;
-      border-radius: 3px;
-      font-size: 12px;
-    }
+        .day {
+            border: 1px solid #ddd;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            height: 100%;
+            min-height: 200px; /* Hauteur min visuelle */
+        }
 
-    .event-pink { border: 1px solid #f4a7c1; background-color: #fddde6; }
-    .event-red  { border: 1px solid #f47a7a; background-color: #fddede; }
-    .event-blue { border: 1px solid #add8e6; background-color: #d0eaff; }
-    .event-green{ border: 1px solid #98fb98; background-color: #d0f5d0; }
+        .day:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
 
-    .event-title { font-weight: bold; font-size: 12px; margin-bottom: 2px; }
-    .event-text  { font-size: 11px; }
+        .day-header {
+            background-color: #f4a7c1;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            padding: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-    /* === MODALE === */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: white;
-      padding: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      border-radius: 8px;
-      width: 280px;
-      z-index: 1000;
-    }
+        /* Jours grisés pour le weekend */
+        .day[data-day="Samedi"] .day-header, .day[data-day="Dimanche"] .day-header {
+            background-color: #9e9e9e;
+        }
+        .day[data-day="Samedi"], .day[data-day="Dimanche"] {
+            background-color: #f9f9f9;
+        }
 
-    .modal-header { font-weight: bold; font-size: 16px; margin-bottom: 8px; }
-    .modal input, .modal textarea, .modal select {
-      width: 100%;
-      padding: 6px;
-      margin: 5px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-    }
+        .day-content {
+            flex: 1;
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
 
-    .modal textarea { height: 60px; }
+        /* === ÉVÉNEMENTS === */
+        .event {
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid rgba(0,0,0,0.2);
+            transition: filter 0.2s;
+        }
+        .event:hover { filter: brightness(0.95); }
 
-    .modal button {
-      width: 100%;
-      background-color: #f4a7c1;
-      color: white;
-      border: none;
-      padding: 8px;
-      font-size: 14px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-top: 6px;
-    }
+        .event-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        
+        .event-text {
+            font-size: 12px;
+            white-space: pre-wrap; /* IMPORTANT: Permet les sauts de ligne et listes */
+            line-height: 1.4;
+        }
 
-    #deleteEventBtn { background-color: red; display: none; }
+        /* Couleurs */
+        .color-pink   { background-color: #fddde6; border-color: #f4a7c1; color: #5a2d3b; }
+        .color-red    { background-color: #ffcdd2; border-color: #e57373; color: #b71c1c; }
+        .color-blue   { background-color: #bbdefb; border-color: #64b5f6; color: #0d47a1; }
+        .color-green  { background-color: #c8e6c9; border-color: #81c784; color: #1b5e20; }
+        .color-yellow { background-color: #fff9c4; border-color: #fff176; color: #f57f17; }
+        .color-purple { background-color: #e1bee7; border-color: #ba68c8; color: #4a148c; }
+        .color-orange { background-color: #ffe0b2; border-color: #ffb74d; color: #e65100; }
+        .color-cyan   { background-color: #b2ebf2; border-color: #4dd0e1; color: #006064; }
 
-    .overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-      z-index: 999;
-    }
+        /* === MODALE === */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+            backdrop-filter: blur(2px);
+        }
 
-    .download-btn {
-      display: block;
-      margin: 12px auto;
-      padding: 8px 16px;
-      background-color: #f4a7c1;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-    }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border-radius: 12px;
+            width: 320px;
+            z-index: 1000;
+        }
 
-    /* === IMPRESSION === */
-    @media print {
-      body {
-        background: white;
-        padding: 0;
-        margin: 0;
-      }
-      .download-btn, .modal, .overlay { display: none !important; }
-      .calendar {
-        height: auto;
-        max-height: none;
-        gap: 2px;
-      }
-      .day {
-        font-size: 10px;
-        padding: 3px;
-      }
-      .day-header {
-        font-size: 11px;
-        padding: 2px;
-      }
-      .day-content {
-        font-size: 9px;
-        overflow: visible;
-      }
-      @page {
-        size: A4 landscape;
-        margin: 10mm;
-      }
-    }
-  </style>
+        .modal h2 { font-size: 18px; margin-bottom: 15px; color: #333; }
+
+        .modal input, .modal textarea, .modal select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+
+        .modal textarea { height: 100px; resize: vertical; }
+
+        .modal-buttons { display: flex; gap: 10px; margin-top: 10px; }
+        .modal-buttons button { flex: 1; }
+
+        /* === IMPRESSION (PDF/PAPIER) === */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 5mm; /* Marges fines pour maximiser l'espace */
+            }
+
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+                -webkit-print-color-adjust: exact; /* Force l'impression des couleurs de fond */
+                print-color-adjust: exact;
+            }
+
+            .controls, .overlay, .modal { display: none !important; }
+
+            .calendar-container {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+            }
+
+            .calendar {
+                display: grid;
+                /* Force la grille à prendre toute la hauteur de la page A4 moins un peu de marge */
+                height: 190mm; 
+                grid-template-rows: 1fr 1fr; /* Deux lignes de hauteur égale EXACTE */
+                gap: 2mm;
+            }
+
+            .day {
+                border: 1px solid #000; /* Bordures noires nettes */
+                box-shadow: none;
+                border-radius: 0;
+                background-color: white !important; /* Fond blanc pour économie d'encre sauf header */
+            }
+            
+            /* On garde la couleur des headers en impression pour la lisibilité */
+            .day-header {
+                color: black;
+                border-bottom: 1px solid #000;
+                font-size: 11pt;
+                padding: 4px;
+            }
+
+            /* Styles des événements à l'impression */
+            .event {
+                border: 1px solid #999;
+                background-color: #f0f0f0 !important; /* Gris très clair pour économiser l'encre */
+                color: black !important;
+                margin-bottom: 2mm;
+                page-break-inside: avoid;
+            }
+            
+            .event-title { font-size: 10pt; }
+            .event-text { font-size: 9pt; }
+        }
+        
+        /* Ajustement Mobile pour l'édition */
+        @media screen and (max-width: 768px) {
+            .calendar { grid-template-columns: 1fr; grid-template-rows: auto; }
+            .controls { position: static; width: 100%; margin-bottom: 20px; flex-direction: row; flex-wrap: wrap; }
+            .calendar-container { margin-right: 0; }
+        }
+    </style>
 </head>
 <body>
 
-  <div class="calendar">
-    <!-- semaine 1 -->
-    <div class="day" data-day="Lundi"><div class="day-header">Lundi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Mardi"><div class="day-header">Mardi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Mercredi"><div class="day-header">Mercredi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Jeudi"><div class="day-header">Jeudi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Vendredi"><div class="day-header">Vendredi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Samedi"><div class="day-header">Samedi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Dimanche"><div class="day-header">Dimanche</div><div class="day-content"></div></div>
+    <div class="controls">
+        <h3>Menu</h3>
+        <button class="btn btn-save" id="saveBtn"><i class="fas fa-save"></i> Sauvegarder</button>
+        <button class="btn btn-load" id="loadBtn"><i class="fas fa-upload"></i> Charger</button>
+        <button class="btn btn-print" id="printBtn"><i class="fas fa-file-download"></i> Télécharger PDF</button>
+        <button class="btn btn-clear" id="clearBtn"><i class="fas fa-trash"></i> Tout effacer</button>
+        <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">
+            La sauvegarde reste dans votre navigateur.
+        </div>
+    </div>
 
-    <!-- semaine 2 -->
-    <div class="day" data-day="Lundi"><div class="day-header">Lundi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Mardi"><div class="day-header">Mardi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Mercredi"><div class="day-header">Mercredi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Jeudi"><div class="day-header">Jeudi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Vendredi"><div class="day-header">Vendredi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Samedi"><div class="day-header">Samedi</div><div class="day-content"></div></div>
-    <div class="day" data-day="Dimanche"><div class="day-header">Dimanche</div><div class="day-content"></div></div>
-  </div>
+    <div class="calendar-container">
+        <div class="calendar" id="calendarGrid">
+            </div>
+    </div>
 
-  <button class="download-btn" id="downloadBtn">Télécharger le calendrier</button>
+    <div class="overlay" id="modalOverlay"></div>
+    <div class="modal" id="eventModal">
+        <h2>Éditer l'événement</h2>
+        <input type="text" id="eventTitle" placeholder="Titre (ex: Maths)" />
+        <textarea id="eventText" placeholder="Détails (sauts de ligne autorisés...)"></textarea>
+        
+        <label for="eventColor">Couleur :</label>
+        <select id="eventColor">
+            <option value="pink">Rose Pastel</option>
+            <option value="red">Rouge Urgent</option>
+            <option value="blue">Bleu Ciel</option>
+            <option value="green">Vert Nature</option>
+            <option value="yellow">Jaune Soleil</option>
+            <option value="purple">Violet Doux</option>
+            <option value="orange">Orange Vif</option>
+            <option value="cyan">Cyan Frais</option>
+        </select>
+        
+        <div class="modal-buttons">
+            <button class="btn btn-save" id="confirmEventBtn">Valider</button>
+            <button class="btn btn-clear" id="deleteEventBtn" style="display:none;">Supprimer</button>
+        </div>
+    </div>
 
-  <!-- MODALE -->
-  <div class="modal" id="eventModal">
-    <div class="modal-header">Ajouter/Modifier un événement</div>
-    <input type="text" id="eventTitle" placeholder="Titre de l'événement" />
-    <textarea id="eventText" placeholder="Description de l'événement"></textarea>
-    <label for="eventColor">Couleur :</label>
-    <select id="eventColor">
-      <option value="pink">Rose</option>
-      <option value="red">Rouge pâle</option>
-      <option value="blue">Bleu pâle</option>
-      <option value="green">Vert pâle</option>
-    </select>
-    <button id="saveEventBtn">Enregistrer</button>
-    <button id="deleteEventBtn">Supprimer</button>
-  </div>
-  <div class="overlay" id="modalOverlay"></div>
+    <script>
+        // --- CONFIGURATION ---
+        const daysOfWeek = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+        const calendarGrid = document.getElementById('calendarGrid');
 
-  <script>
-    const modal = document.getElementById('eventModal');
-    const overlay = document.getElementById('modalOverlay');
-    let selectedDay = null;
-    let selectedEvent = null;
+        // --- GÉNÉRATION DE LA GRILLE ---
+        function generateCalendar() {
+            calendarGrid.innerHTML = '';
+            // On génère 14 jours (2 semaines)
+            for (let i = 0; i < 14; i++) {
+                const dayName = daysOfWeek[i % 7];
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'day';
+                dayDiv.setAttribute('data-day', dayName);
+                dayDiv.setAttribute('data-index', i); // Index unique pour la sauvegarde
 
-    document.querySelectorAll('.day').forEach(day => {
-      day.addEventListener('click', (e) => {
-        if (e.target.classList.contains('event-pink') ||
-            e.target.classList.contains('event-red') ||
-            e.target.classList.contains('event-blue') ||
-            e.target.classList.contains('event-green')) {
-          selectedEvent = e.target;
-          document.getElementById('eventTitle').value = selectedEvent.querySelector('.event-title').textContent;
-          document.getElementById('eventText').value = selectedEvent.querySelector('.event-text') ? selectedEvent.querySelector('.event-text').textContent : '';
-          if (selectedEvent.classList.contains('event-red')) document.getElementById('eventColor').value = 'red';
-          else if (selectedEvent.classList.contains('event-blue')) document.getElementById('eventColor').value = 'blue';
-          else if (selectedEvent.classList.contains('event-green')) document.getElementById('eventColor').value = 'green';
-          else document.getElementById('eventColor').value = 'pink';
-          document.getElementById('deleteEventBtn').style.display = 'block';
-        } else {
-          selectedDay = day.querySelector('.day-content');
-          document.getElementById('eventTitle').value = '';
-          document.getElementById('eventText').value = '';
-          document.getElementById('eventColor').value = 'pink';
-          document.getElementById('deleteEventBtn').style.display = 'none';
+                // Header
+                const header = document.createElement('div');
+                header.className = 'day-header';
+                header.textContent = i < 7 ? dayName : dayName + " (S2)";
+                
+                // Content Zone
+                const content = document.createElement('div');
+                content.className = 'day-content';
+                content.onclick = (e) => {
+                    if(e.target === content) openModal(content, null);
+                };
+
+                dayDiv.appendChild(header);
+                dayDiv.appendChild(content);
+                calendarGrid.appendChild(dayDiv);
+            }
         }
-        modal.style.display = 'block';
-        overlay.style.display = 'block';
-      });
-    });
 
-    document.getElementById('saveEventBtn').addEventListener('click', () => {
-      const title = document.getElementById('eventTitle').value;
-      const text = document.getElementById('eventText').value;
-      const color = document.getElementById('eventColor').value;
-      if (title) {
-        const eventElement = document.createElement('div');
-        eventElement.classList.add(
-          color === 'pink' ? 'event-pink' :
-          color === 'red' ? 'event-red' :
-          color === 'blue' ? 'event-blue' :
-          'event-green'
-        );
-        eventElement.innerHTML = `<div class="event-title">${title}</div><div class="event-text">${text}</div>`;
-        if (selectedEvent) {
-          selectedEvent.replaceWith(eventElement);
-          selectedEvent = null;
-        } else {
-          selectedDay.appendChild(eventElement);
+        // --- GESTION DE LA MODALE ---
+        const modal = document.getElementById('eventModal');
+        const overlay = document.getElementById('modalOverlay');
+        const titleInput = document.getElementById('eventTitle');
+        const textInput = document.getElementById('eventText');
+        const colorInput = document.getElementById('eventColor');
+        const deleteBtn = document.getElementById('deleteEventBtn');
+
+        let currentTargetContainer = null;
+        let currentTargetEvent = null;
+
+        function openModal(container, eventElement) {
+            currentTargetContainer = container;
+            currentTargetEvent = eventElement;
+
+            if (eventElement) {
+                // Mode Modification
+                titleInput.value = eventElement.querySelector('.event-title').textContent;
+                textInput.value = eventElement.querySelector('.event-text').textContent;
+                
+                // Retrouver la couleur depuis la classe
+                const classes = eventElement.className.split(' ');
+                const colorClass = classes.find(c => c.startsWith('color-'));
+                colorInput.value = colorClass ? colorClass.replace('color-', '') : 'pink';
+                
+                deleteBtn.style.display = 'block';
+            } else {
+                // Mode Création
+                titleInput.value = '';
+                textInput.value = '';
+                colorInput.value = 'pink';
+                deleteBtn.style.display = 'none';
+            }
+
+            modal.style.display = 'block';
+            overlay.style.display = 'block';
+            titleInput.focus();
         }
-      }
-      modal.style.display = 'none';
-      overlay.style.display = 'none';
-    });
 
-    document.getElementById('deleteEventBtn').addEventListener('click', () => {
-      if (selectedEvent) {
-        selectedEvent.remove();
-        selectedEvent = null;
-      }
-      modal.style.display = 'none';
-      overlay.style.display = 'none';
-    });
+        function closeModal() {
+            modal.style.display = 'none';
+            overlay.style.display = 'none';
+            currentTargetContainer = null;
+            currentTargetEvent = null;
+        }
 
-    overlay.addEventListener('click', () => {
-      modal.style.display = 'none';
-      overlay.style.display = 'none';
-      selectedEvent = null;
-    });
+        overlay.addEventListener('click', closeModal);
 
-    document.getElementById('downloadBtn').addEventListener('click', () => {
-      window.print();
-    });
-  </script>
+        // --- VALIDATION ÉVÉNEMENT ---
+        document.getElementById('confirmEventBtn').addEventListener('click', () => {
+            const title = titleInput.value.trim();
+            const text = textInput.value; // On garde les sauts de ligne
+            const color = colorInput.value;
 
+            if (!title) return alert("Il faut au moins un titre !");
+
+            const eventDiv = currentTargetEvent || document.createElement('div');
+            eventDiv.className = `event color-${color}`;
+            // Attention: textContent pour le titre, mais innerHTML non nécessaire car CSS white-space gere le format
+            eventDiv.innerHTML = `
+                <div class="event-title">${escapeHtml(title)}</div>
+                <div class="event-text">${escapeHtml(text)}</div>
+            `;
+
+            // Ajout de l'événement click pour modification
+            eventDiv.onclick = (e) => {
+                e.stopPropagation(); // Empêche de déclencher le click du jour
+                openModal(eventDiv.parentElement, eventDiv);
+            };
+
+            if (!currentTargetEvent) {
+                currentTargetContainer.appendChild(eventDiv);
+            }
+            
+            closeModal();
+            saveToLocalStorage(); // Sauvegarde auto après modif
+        });
+
+        document.getElementById('deleteEventBtn').addEventListener('click', () => {
+            if (currentTargetEvent) {
+                currentTargetEvent.remove();
+            }
+            closeModal();
+            saveToLocalStorage();
+        });
+
+        // Sécurité XSS simple
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // --- SAUVEGARDE & CHARGEMENT (LOCALSTORAGE) ---
+        function saveToLocalStorage() {
+            const data = [];
+            document.querySelectorAll('.day').forEach((day, index) => {
+                const events = [];
+                day.querySelectorAll('.event').forEach(evt => {
+                    const colorClass = Array.from(evt.classList).find(c => c.startsWith('color-'));
+                    events.push({
+                        title: evt.querySelector('.event-title').textContent,
+                        text: evt.querySelector('.event-text').textContent,
+                        color: colorClass ? colorClass.replace('color-', '') : 'pink'
+                    });
+                });
+                data.push({ index: index, events: events });
+            });
+            localStorage.setItem('myTimetableData', JSON.stringify(data));
+            console.log("Sauvegardé !");
+        }
+
+        function loadFromLocalStorage() {
+            const stored = localStorage.getItem('myTimetableData');
+            if (!stored) {
+                alert("Aucune sauvegarde trouvée !");
+                return;
+            }
+            
+            const data = JSON.parse(stored);
+            // On nettoie d'abord
+            generateCalendar();
+            
+            // On remplit
+            const days = document.querySelectorAll('.day-content');
+            data.forEach(item => {
+                if (days[item.index]) {
+                    item.events.forEach(evtData => {
+                        const div = document.createElement('div');
+                        div.className = `event color-${evtData.color}`;
+                        div.innerHTML = `
+                            <div class="event-title">${escapeHtml(evtData.title)}</div>
+                            <div class="event-text">${escapeHtml(evtData.text)}</div>
+                        `;
+                        div.onclick = (e) => {
+                            e.stopPropagation();
+                            openModal(days[item.index], div);
+                        };
+                        days[item.index].appendChild(div);
+                    });
+                }
+            });
+        }
+
+        // --- BOUTONS DU MENU ---
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            saveToLocalStorage();
+            alert("Emploi du temps sauvegardé dans ce navigateur !");
+        });
+
+        document.getElementById('loadBtn').addEventListener('click', loadFromLocalStorage);
+
+        document.getElementById('printBtn').addEventListener('click', () => {
+            window.print();
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            if(confirm("Voulez-vous vraiment tout effacer ?")) {
+                generateCalendar();
+                localStorage.removeItem('myTimetableData');
+            }
+        });
+
+        // --- INITIALISATION ---
+        window.onload = () => {
+            generateCalendar();
+            // Optionnel : charger automatiquement au démarrage s'il y a des données
+            if(localStorage.getItem('myTimetableData')) {
+                loadFromLocalStorage();
+            }
+        };
+
+    </script>
 </body>
 </html>
-
